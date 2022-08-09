@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import collections
 import datetime
-
+import glob
 import pygame
 import numpy as np
 import pathlib
 import pandas as pd
+import pretty_midi
 import seaborn as sns
 import tensorflow as tf
 import tensorflow_datasets as tfds
@@ -17,23 +18,19 @@ seed = 42
 tf.random.set_seed(seed)
 np.random.seed(seed)
 
+# Sampling rate for audio playback
+_SAMPLING_RATE = 16000
 
 
+data_dir = pathlib.Path('e-gmd-v1.0.0')
 
-# Load the full GMD with MIDI only (no audio) as a tf.data.Dataset
-dataset = tfds.load(
-    name="groove/full-midionly",
-    split=tfds.Split.TRAIN,
-    try_gcs=True)
+filenames = glob.glob(str(data_dir/'**/**/*.mid*'))
 
-# Build your input pipeline
-dataset = dataset.shuffle(1024).batch(32).prefetch(
-    tf.data.experimental.AUTOTUNE)
+#print('Number of files:', len(filenames))
 
-for features in dataset.take(1):
-  # Access the features you are interested in
-  midi, genre = features["midi"], features["style"]["primary"]
-  break;
+sample_file = filenames[1]
+
+#print(sample_file)
 
 
 def play_music(midi_filename):
@@ -58,11 +55,11 @@ pygame.mixer.music.set_volume(0.8)
 # listen for interruptions
 try:
   # use the midi file you just saved
-  play_music(midi)
+  play_music(sample_file)
 except KeyboardInterrupt:
   # if user hits Ctrl/C then exit
   # (works only in console mode)
   pygame.mixer.music.fadeout(1000)
   pygame.mixer.music.stop()
   raise SystemExit
-  
+
