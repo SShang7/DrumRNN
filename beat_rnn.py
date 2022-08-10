@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import collections
 import datetime
+import random
 import glob
 import pygame
 import numpy as np
@@ -26,7 +27,7 @@ data_dir = pathlib.Path('e-gmd-v1.0.0')
 
 filenames = glob.glob(str(data_dir/'**/**/*.mid*'))
 
-#print('Number of files:', len(filenames))
+print('Number of files:', len(filenames))
 
 sample_file = filenames[1]
 
@@ -120,9 +121,12 @@ def notes_to_midi(
   
 #####PREPARE TRAINING DATA#####
   
-num_files = 250
+num_files = 45537
 all_notes = []
-for f in filenames[:num_files]:
+
+#rand_list = random.sample(range(45537), num_files)
+for i in range(num_files):
+    f=filenames[i]
     notes = midi_to_notes(f)
     all_notes.append(notes)
 all_notes = pd.concat(all_notes)
@@ -169,7 +173,7 @@ def create_sequences(
   return sequences.map(split_labels, num_parallel_calls=tf.data.AUTOTUNE)
   
 
-seq_length = 25
+seq_length = 25 #hyper
 seq_ds = create_sequences(notes_ds, seq_length)
 seq_ds.element_spec
 
@@ -222,18 +226,18 @@ loss = {
 }
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-'''
+
 model.compile(
     loss=loss,
-    loss_weights={
+    loss_weights={ #hypers
         'pitch': 0.05,
-        'velocity': 0.05,
+        'velocity': 0.1,
         'step': 1.0,
         'duration':1.0,
     },
     optimizer=optimizer,
 )
-'''
+
 
 #model.summary()
 
@@ -250,7 +254,7 @@ callbacks = [
 
 
 epochs = 50
-'''
+
 history = model.fit(
     train_ds,
     epochs=epochs,
@@ -258,7 +262,11 @@ history = model.fit(
 )
 plt.plot(history.epoch, history.history['loss'], label='total loss')
 plt.show()
-'''
+
+model.save('Day.model')
+
+#new_model = tf.keras.models.load_model('25p50v.model')
+
 def predict_next_note(
     notes: np.ndarray, 
     keras_model: tf.keras.Model, 
@@ -291,8 +299,8 @@ def predict_next_note(
 
   return int(pitch), int(velocity), float(step), float(duration)
 
-temperature = 1.0
-num_predictions = 200
+temperature = 1.5 #generation parameter
+num_predictions = 100
 
 sample_notes = np.stack([raw_notes[key] for key in key_order], axis=1)
 
@@ -316,7 +324,7 @@ for _ in range(num_predictions):
 generated_notes = pd.DataFrame(
     generated_notes, columns=(*key_order, 'start', 'end'))
 
-out_file = 'example.mid'
+out_file = 'exampleDay.mid'
 out_pm = notes_to_midi(
     generated_notes, out_file=out_file, instrument_name=instrument_name)
 
