@@ -205,8 +205,10 @@ input_shape = (seq_length, 4)
 learning_rate = 0.005
 
 inputs = tf.keras.Input(input_shape)
-x = tf.keras.layers.LSTM(128)(inputs)
-
+w = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(inputs)
+z = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(w)
+y = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True))(z)
+x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128))(y)
 outputs = {
   'pitch': tf.keras.layers.Dense(128, name='pitch')(x),
   'velocity': tf.keras.layers.Dense(128, name='velocity')(x),
@@ -230,8 +232,8 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 model.compile(
     loss=loss,
     loss_weights={ #hypers
-        'pitch': 0.05,
-        'velocity': 0.1,
+        'pitch': 0.25,
+        'velocity': 0.5,
         'step': 1.0,
         'duration':1.0,
     },
@@ -239,7 +241,7 @@ model.compile(
 )
 
 
-#model.summary()
+model.summary()
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
@@ -247,7 +249,7 @@ callbacks = [
         save_weights_only=True),
     tf.keras.callbacks.EarlyStopping(
         monitor='loss',
-        patience=5,
+        patience=7,
         verbose=1,
         restore_best_weights=True),
 ]
@@ -263,7 +265,7 @@ history = model.fit(
 plt.plot(history.epoch, history.history['loss'], label='total loss')
 plt.show()
 
-model.save('Day.model')
+model.save('4ltsm128.model')
 
 #new_model = tf.keras.models.load_model('25p50v.model')
 
@@ -324,7 +326,7 @@ for _ in range(num_predictions):
 generated_notes = pd.DataFrame(
     generated_notes, columns=(*key_order, 'start', 'end'))
 
-out_file = 'exampleDay.mid'
+out_file = 'example4ltsm128.mid'
 out_pm = notes_to_midi(
     generated_notes, out_file=out_file, instrument_name=instrument_name)
 
